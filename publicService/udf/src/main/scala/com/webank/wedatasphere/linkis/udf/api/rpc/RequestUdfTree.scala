@@ -16,7 +16,10 @@
 
 package com.webank.wedatasphere.linkis.udf.api.rpc
 
-import com.webank.wedatasphere.linkis.protocol.{CacheableProtocol, RetryableProtocol}
+import com.webank.wedatasphere.linkis.protocol.{BroadcastProtocol, CacheableProtocol, RetryableProtocol}
 
 trait UdfProtocol
+
 case class RequestUdfTree(userName: String, treeType: String, treeId: Long, treeCategory: String) extends RetryableProtocol with CacheableProtocol with UdfProtocol
+
+case class BroadcastUdfChanged(userName: Set[String]) extends RetryableProtocol with BroadcastProtocol

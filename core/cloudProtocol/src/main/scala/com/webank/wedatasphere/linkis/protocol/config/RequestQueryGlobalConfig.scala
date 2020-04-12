@@ -16,7 +16,7 @@
 
 package com.webank.wedatasphere.linkis.protocol.config
 
-import com.webank.wedatasphere.linkis.protocol.{CacheableProtocol, RetryableProtocol}
+import com.webank.wedatasphere.linkis.protocol.{BroadcastProtocol, CacheableProtocol, RetryableProtocol}
 
 /**
   * Created by enjoyyin on 2018/10/16.
@@ -28,3 +28,5 @@ case class RequestQueryGlobalConfig(userName:String) extends CacheableProtocol w
 case class RequestQueryAppConfig(userName:String,creator:String,appName:String) extends CacheableProtocol with RetryableProtocol with ConfigProtocol
 
 case class RequestQueryAppConfigWithGlobal(userName:String,creator:String,appName:String,isMerge:Boolean) extends CacheableProtocol with RetryableProtocol with ConfigProtocol
+
+case class BroadcastConfigChange(userName:String) extends BroadcastProtocol with RetryableProtocol;

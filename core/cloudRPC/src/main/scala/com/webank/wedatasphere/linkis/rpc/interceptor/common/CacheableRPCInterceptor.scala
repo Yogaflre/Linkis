@@ -22,6 +22,7 @@ import com.google.common.cache.{Cache, CacheBuilder, RemovalListener, RemovalNot
 import com.webank.wedatasphere.linkis.common.exception.WarnException
 import com.webank.wedatasphere.linkis.common.utils.Logging
 import com.webank.wedatasphere.linkis.protocol.CacheableProtocol
+import com.webank.wedatasphere.linkis.rpc.conf.RPCConfiguration
 import com.webank.wedatasphere.linkis.rpc.interceptor.{RPCInterceptor, RPCInterceptorChain, RPCInterceptorExchange}
 import org.springframework.stereotype.Component
 
@@ -43,17 +44,21 @@ class CacheableRPCInterceptor extends RPCInterceptor with Logging{
 
   override def intercept(interceptorExchange: RPCInterceptorExchange, chain: RPCInterceptorChain): Any = interceptorExchange.getProtocol match {
     case cacheable: CacheableProtocol =>
-      guavaCache.get(cacheable.toString, new Callable[Any] {
-        override def call(): Any = {
-          val returnMsg = chain.handle(interceptorExchange)
-          returnMsg match {
-            case warn: WarnException =>
-              throw warn
-            case _ =>
-              returnMsg
+      if (RPCConfiguration.BDP_PRC_CLIENT_CACHE.getValue){
+        guavaCache.get(cacheable.toString, new Callable[Any] {
+          override def call(): Any = {
+            val returnMsg = chain.handle(interceptorExchange)
+            returnMsg match {
+              case warn: WarnException =>
+                throw warn
+              case _ =>
+                returnMsg
+            }
           }
-        }
-      })
+        })
+      } else {
+        chain.handle(interceptorExchange)
+      }
     case _ => chain.handle(interceptorExchange)
   }
 }

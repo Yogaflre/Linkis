@@ -23,4 +23,5 @@ object UdfConfiguration {
   val UDF_HIVE_EXEC_PATH = CommonVars("wds.linkis.udf.hive.exec.path", "/appcom/Install/DataWorkCloudInstall/linkis-linkis-Udf-0.0.3-SNAPSHOT/lib/hive-exec-1.2.1.jar")
   val UDF_TMP_PATH = CommonVars("wds.linkis.udf.tmp.path", "/tmp/udf/")
 
+  val PUBLIC_SERVICE_APPLICATION_NAME = CommonVars("wds.linkis.publicservice.name", "cloud-publicservice")
 }

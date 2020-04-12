@@ -16,8 +16,10 @@
 
 package com.webank.wedatasphere.linkis.configuration.receiver
 
+import java.util.concurrent.Callable
+
 import com.webank.wedatasphere.linkis.configuration.service.ConfigurationService
-import com.webank.wedatasphere.linkis.protocol.config.{RequestQueryAppConfig, RequestQueryAppConfigWithGlobal, RequestQueryGlobalConfig}
+import com.webank.wedatasphere.linkis.protocol.config._
 import com.webank.wedatasphere.linkis.rpc.{Receiver, Sender}
 
 import scala.concurrent.duration.Duration
@@ -36,10 +38,21 @@ class ConfigurationReceiver extends Receiver{
 
   override def receive(message: Any, sender: Sender): Unit = {}
 
-  override def receiveAndReply(message: Any, sender: Sender): Any = message match {
-    case RequestQueryGlobalConfig(userName:String)=>configurationService.queryGolbalConfig(userName)
-    case e:RequestQueryAppConfig =>configurationService.queryAppConfig(e.userName,e.creator,e.appName)
-    case e:RequestQueryAppConfigWithGlobal =>configurationService.queryAppConfigWithGlobal(e.userName,e.creator,e.appName,e.isMerge)
+  override def receiveAndReply(message: Any, sender: Sender): Any = {
+    message match {
+      case RequestQueryGlobalConfig(userName: String) =>
+        configurationService.guavaCache.get(ConfigurationReceiverBody(userName, message.getClass.getName + "$", null, null, null), new Callable[ResponseQueryConfig] {
+          override def call(): ResponseQueryConfig = configurationService.queryGolbalConfig(userName)
+        })
+      case e: RequestQueryAppConfig =>
+        configurationService.guavaCache.get(ConfigurationReceiverBody(e.userName, message.getClass.getName + "$", e.creator, e.appName, null), new Callable[ResponseQueryConfig] {
+          override def call(): ResponseQueryConfig = configurationService.queryAppConfig(e.userName, e.creator, e.appName)
+        })
+      case e: RequestQueryAppConfigWithGlobal =>
+        configurationService.guavaCache.get(ConfigurationReceiverBody(e.userName, message.getClass.getName + "$", e.creator, e.appName, e.isMerge), new Callable[ResponseQueryConfig] {
+          override def call(): ResponseQueryConfig = configurationService.queryAppConfigWithGlobal(e.userName, e.creator, e.appName, e.isMerge)
+        })
+    }
   }
 
   override def receiveAndReply(message: Any, duration: Duration, sender: Sender): Any = {}

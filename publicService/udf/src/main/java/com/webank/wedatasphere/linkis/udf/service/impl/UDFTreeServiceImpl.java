@@ -16,20 +16,31 @@
 
 package com.webank.wedatasphere.linkis.udf.service.impl;
 
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.Iterables;
+import com.webank.wedatasphere.linkis.rpc.Sender;
+import com.webank.wedatasphere.linkis.udf.api.rpc.BroadcastUdfChanged;
 import com.webank.wedatasphere.linkis.udf.dao.UDFTreeDao;
+import com.webank.wedatasphere.linkis.udf.entity.UDFCacheKey;
 import com.webank.wedatasphere.linkis.udf.entity.UDFInfo;
 import com.webank.wedatasphere.linkis.udf.entity.UDFTree;
 import com.webank.wedatasphere.linkis.udf.excepiton.UDFException;
 import com.webank.wedatasphere.linkis.udf.service.UDFService;
 import com.webank.wedatasphere.linkis.udf.service.UDFTreeService;
+import com.webank.wedatasphere.linkis.udf.utils.UdfConfiguration;
 import org.apache.commons.collections.map.HashedMap;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
+import scala.collection.JavaConversions;
+import scala.collection.JavaConverters;
 
 import java.util.*;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
  * Created by johnnwang on 8/18/18.
@@ -59,6 +70,11 @@ public class UDFTreeServiceImpl implements UDFTreeService {
         firstFloorName.put(SHARE_USER, "共享函数");
     }
 
+    private Cache<UDFCacheKey, UDFTree> guavaCache = CacheBuilder.newBuilder().concurrencyLevel(5)
+            .expireAfterAccess(10, TimeUnit.MINUTES).initialCapacity(64).maximumSize(1000).recordStats()
+            .removalListener(removalNotification ->
+                    logger.debug("UDF cache removed key => "+removalNotification.getKey()+", value => "+ removalNotification.getValue()))
+            .build();
 
     /**
      * 每个用户的初始化，以及第一次调用系统的初始化
@@ -212,6 +228,36 @@ public class UDFTreeServiceImpl implements UDFTreeService {
         params.put("userName", SHARE_USER);
         params.put("category", category);
         return Iterables.getFirst(udfTreeDao.getTreesByParentId(params), null);
+    }
+
+    @Override
+    public UDFTree getTreeCacheById(Long treeId, String userName, String type, String category) throws ExecutionException {
+        return guavaCache.get(new UDFCacheKey(userName,treeId,type,category), () -> getTreeById(treeId,userName,type,category));
+    }
+
+    @Override
+    public void clearUdfCache(Set<String> userNames) {
+        try {
+            if (!userNames.isEmpty()){
+                Set<UDFCacheKey> cacheKeys = guavaCache.asMap().keySet().stream()
+                        .filter(key -> userNames.contains(key.getUserName()))
+                        .collect(Collectors.toSet());
+                guavaCache.invalidateAll(cacheKeys);
+                logger.info(String.join(",", userNames) + " udf changed");
+            }
+        }catch (Exception e){
+            logger.error("UDF cache removed users => "+ String.join(",", userNames));
+        }
+    }
+
+    @Override
+    public void broadcastUdfChanged(Set<String> userNames) {
+        try {
+            Sender sender = Sender.getSender(UdfConfiguration.PUBLIC_SERVICE_APPLICATION_NAME().getValue());
+            sender.send(new BroadcastUdfChanged(JavaConversions.asScalaSet(userNames).toSet()));
+        }catch (Exception e){
+            logger.error("Broadcast UDF changed error. users ="+ String.join(",", userNames));
+        }
     }
 
 }

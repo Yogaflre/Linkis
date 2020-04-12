@@ -16,7 +16,7 @@
 
 package com.webank.wedatasphere.linkis.protocol.utils
 
-import javafx.beans.binding.LongExpression
+//import javafx.beans.binding.LongExpression
 
 /**
   * created by enjoyyin on 2018/11/8

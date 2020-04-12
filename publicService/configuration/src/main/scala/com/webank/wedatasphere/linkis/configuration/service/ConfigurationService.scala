@@ -18,19 +18,25 @@ package com.webank.wedatasphere.linkis.configuration.service
 
 import java.lang.Long
 import java.util
+import java.util.concurrent.TimeUnit
 
+import com.google.common.cache.{Cache, CacheBuilder, RemovalListener, RemovalNotification}
 import com.webank.wedatasphere.linkis.common.utils.{Logging, Utils}
 import com.webank.wedatasphere.linkis.configuration.dao.ConfigMapper
 import com.webank.wedatasphere.linkis.configuration.entity._
 import com.webank.wedatasphere.linkis.configuration.exception.ConfigurationException
+import com.webank.wedatasphere.linkis.configuration.receiver.ConfigurationReceiverBody
 import com.webank.wedatasphere.linkis.configuration.util.Constants
 import com.webank.wedatasphere.linkis.configuration.validate.ValidatorManager
-import com.webank.wedatasphere.linkis.protocol.config.ResponseQueryConfig
+import com.webank.wedatasphere.linkis.protocol.config.{BroadcastConfigChange, RequestQueryAppConfig, RequestQueryAppConfigWithGlobal, RequestQueryGlobalConfig, ResponseQueryConfig}
+import com.webank.wedatasphere.linkis.rpc.Sender
 import com.webank.wedatasphere.linkis.server.BDPJettyServerHelper
 import org.apache.commons.lang.StringUtils
 import org.springframework.beans.BeanUtils
-import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.{Autowired, Value}
 import org.springframework.stereotype.Service
+
+import scala.collection.JavaConverters._
 
 /**
   * Created by allenlliu on 2019/4/8.
@@ -42,6 +48,31 @@ class ConfigurationService extends Logging {
 
   @Autowired private var validatorManager: ValidatorManager = _
 
+  @Value("${spring.application.name}") private var applicationName: String = _
+
+  val guavaCache: Cache[ConfigurationReceiverBody, ResponseQueryConfig] = CacheBuilder.newBuilder().concurrencyLevel(5)
+    .expireAfterAccess(10, TimeUnit.MINUTES).initialCapacity(64)
+    .maximumSize(1000).recordStats().removalListener(new RemovalListener[Any, Any] {
+    override def onRemoval(removalNotification: RemovalNotification[Any, Any]): Unit = {
+      debug(s"Config cache removed key => ${removalNotification.getKey}, value => ${removalNotification.getValue}.")
+    }
+  }).asInstanceOf[CacheBuilder[Any, Any]].build()
+
+  def broadcastConfigChange(userName: String): Unit = {
+    Utils.tryAndWarnMsg({
+      val sender = Sender.getSender(applicationName)
+      sender.send(BroadcastConfigChange(userName))
+    })("Broadcast config changed error.")
+  }
+
+  def clearConfigCache(userName: String): Unit = {
+    Utils.tryAndWarnMsg({
+      val cacheSet = guavaCache.asMap().keySet().asScala.filter(body => body.userName == userName)
+      guavaCache.invalidateAll(cacheSet.asJava)
+      info(s"$userName config changed.")
+      debug(s"Config cache removed key => ${cacheSet}.")
+    })("Clear config cache error.")
+  }
 
   def updateUserValue(setting: ConfigKeyValueVO) = {
     if (!StringUtils.isEmpty(setting.getValue)) {
@@ -98,7 +129,7 @@ class ConfigurationService extends Logging {
             value = persisteUserValue(f.getId, userName, appName)
           }
           //configTree.getSettings.add(getVO(f, value))
-          Utils.tryCatch(configTree.getSettings.add(getVO(f, value))){
+          Utils.tryCatch(configTree.getSettings.add(getVO(f, value))) {
             t => {
               info(t.getMessage)
               info("restful get data...(开始将非法的数据置空...)")

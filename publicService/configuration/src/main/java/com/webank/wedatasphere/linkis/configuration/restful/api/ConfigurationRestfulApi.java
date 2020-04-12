@@ -70,6 +70,7 @@ public class ConfigurationRestfulApi {
             ConfigTree fullTree = BDPJettyServerHelper.gson().fromJson(s, ConfigTree.class);
             recursiveFullTree(fullTree,username);
         }
+        configurationService.broadcastConfigChange(username);
         Message message = Message.ok();
         return Message.messageToResponse(message);
     }

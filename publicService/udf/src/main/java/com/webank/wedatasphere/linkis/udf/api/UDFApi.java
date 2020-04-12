@@ -162,6 +162,7 @@ public class UDFApi {
             udfService.addUDF(udfInfo, userName);
             message = Message.ok();
             message.data("udf", udfInfo);
+            udfTreeService.broadcastUdfChanged(Sets.newHashSet(userName));
         } catch (Exception e) {
             logger.error("Failed to add UDF: ", e);
             message = Message.error(e.getMessage());
@@ -181,6 +182,7 @@ public class UDFApi {
             udfService.updateUDF(udfInfo, userName);
             message = Message.ok();
             message.data("udf", udfInfo);
+            udfTreeService.broadcastUdfChanged(Sets.newHashSet(userName));
         } catch (Exception e) {
             logger.error("Failed to update UDF: ", e);
             message = Message.error(e.getMessage());
@@ -196,6 +198,7 @@ public class UDFApi {
         try {
             udfService.deleteUDF(id, userName);
             message = Message.ok();
+            udfTreeService.broadcastUdfChanged(Sets.newHashSet(userName));
         } catch (Throwable e){
             logger.error("Failed to delete UDF: ", e);
             message = Message.error(e.getMessage());
@@ -216,6 +219,7 @@ public class UDFApi {
                 udfService.deleteLoadInfo(udfId, userName);
             }
             message = Message.ok();
+            udfTreeService.broadcastUdfChanged(Sets.newHashSet(userName));
         } catch (Throwable e){
             logger.error("Failed to isLoad UDF: ", e);
             message = Message.error(e.getMessage());
@@ -235,6 +239,7 @@ public class UDFApi {
             udfTree =  udfTreeService.addTree(udfTree, userName);
             message = Message.ok();
             message.data("udfTree", udfTree);
+            udfTreeService.broadcastUdfChanged(Sets.newHashSet(userName));
         } catch (Throwable e){
             logger.error("Failed to add Tree: ", e);
             message = Message.error(e.getMessage());
@@ -254,6 +259,7 @@ public class UDFApi {
             udfTree =  udfTreeService.updateTree(udfTree, userName);
             message = Message.ok();
             message.data("udfTree", udfTree);
+            udfTreeService.broadcastUdfChanged(Sets.newHashSet(userName));
         } catch (Throwable e){
             logger.error("Failed to update Tree: ", e);
             message = Message.error(e.getMessage());
@@ -270,6 +276,7 @@ public class UDFApi {
         try {
             udfTreeService.deleteTree(id, userName);
             message = Message.ok();
+            udfTreeService.broadcastUdfChanged(Sets.newHashSet(userName));
         } catch (Throwable e){
             logger.error("Failed to delete Tree: ", e);
             message = Message.error(e.getMessage());
@@ -318,6 +325,7 @@ public class UDFApi {
             udfService.setSharedUDFInfoExpire(shareUDFId);
             udfService.setUDFSharedInfo(false,udfId);
             message = Message.ok();
+            udfTreeService.broadcastUdfChanged(Sets.newHashSet(userName));
         }catch (Throwable e){
             logger.error("Failed to setExpire: ", e);
             message = Message.error(e.getMessage());
@@ -381,6 +389,10 @@ public class UDFApi {
             //Change the is_shared property of the field(改变字段的is_shared属性)
             udfService.setUDFSharedInfo(true,udfInfo.getId());
             message = Message.ok();
+
+            Set<String> cacheUsers = mapper.readValue(json.get("sharedUsers"), Set.class);
+            cacheUsers.add(userName);
+            udfTreeService.broadcastUdfChanged(cacheUsers);
         }catch (Throwable e){
             logger.error("Failed to share: ", e);
             message = Message.error(e.toString());
@@ -443,6 +455,10 @@ public class UDFApi {
             udfService.addSharedUser(sharedUsers,udfId);
             udfService.removeSharedUser(OldsharedUsers,udfId);
             message = Message.ok();
+
+            Set<String> cacheUsers = mapper.readValue(json.get("sharedUsers"), Set.class);
+            cacheUsers.add(userName);
+            udfTreeService.broadcastUdfChanged(cacheUsers);
         }catch (Throwable e){
             logger.error("Failed to setExpire: ", e);
             message = Message.error(e.getMessage());

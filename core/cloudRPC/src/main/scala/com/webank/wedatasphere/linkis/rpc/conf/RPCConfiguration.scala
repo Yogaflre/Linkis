@@ -24,6 +24,7 @@ import com.webank.wedatasphere.linkis.common.conf.{CommonVars, TimeType}
 object RPCConfiguration {
 
   val BDP_RPC_BROADCAST_THREAD_SIZE = CommonVars("wds.linkis.rpc.broadcast.thread.num", new Integer(10))
+  val BDP_PRC_CLIENT_CACHE = CommonVars("wds.linkis.rpc.client.cache", true)
 
   val BDP_RPC_EUREKA_SERVICE_REFRESH_INTERVAL = CommonVars("wds.linkis.rpc.eureka.client.refresh.interval", new TimeType("1s"))
   val BDP_RPC_EUREKA_SERVICE_REFRESH_MAX_WAIT_TIME = CommonVars("wds.linkis.rpc.eureka.client.refresh.wait.time.max", new TimeType("5s"))

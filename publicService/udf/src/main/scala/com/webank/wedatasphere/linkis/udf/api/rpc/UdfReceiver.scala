@@ -37,7 +37,7 @@ class UdfReceiver extends Receiver{
   override def receiveAndReply(message: Any, sender: Sender): Any = {
     message match {
       case RequestUdfTree(userName, treeType, treeId, treeCategory) =>
-        val udfTree = udfTreeService.getTreeById(treeId, userName, treeType, treeCategory)
+        val udfTree = udfTreeService.getTreeCacheById(treeId, userName, treeType, treeCategory)
         new ResponseUdfTree(udfTree)
       case _ =>
     }

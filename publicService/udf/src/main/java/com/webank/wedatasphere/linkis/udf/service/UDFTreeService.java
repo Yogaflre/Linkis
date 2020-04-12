@@ -19,6 +19,9 @@ package com.webank.wedatasphere.linkis.udf.service;
 import com.webank.wedatasphere.linkis.udf.entity.UDFTree;
 import com.webank.wedatasphere.linkis.udf.excepiton.UDFException;
 
+import java.util.Set;
+import java.util.concurrent.ExecutionException;
+
 /**
  * Created by johnnwang on 8/11/18.
  */
@@ -35,4 +38,11 @@ public interface UDFTreeService {
     UDFTree getTreeById(Long id, String userName, String type, String category) throws UDFException;
 
     UDFTree getSharedTree(String category) throws UDFException;
+
+    //cache
+    UDFTree getTreeCacheById(Long treeId, String userName, String type, String category) throws ExecutionException;
+
+    void clearUdfCache(Set<String> userNames);
+
+    void broadcastUdfChanged(Set<String> userNames);
 }
